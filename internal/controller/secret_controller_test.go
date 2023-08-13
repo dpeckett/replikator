@@ -126,7 +126,7 @@ func TestSecretReconciler(t *testing.T) {
 
 	t.Run("Should Only Replicate Specified Keys", func(t *testing.T) {
 		secretWithKeys := secret.DeepCopy()
-		secretWithKeys.Annotations[constants.AnnotationReplicatedKeysKey] = "ca*"
+		secretWithKeys.Annotations[constants.AnnotationReplicateKeysKey] = "ca*"
 
 		client := fake.NewClientBuilder().
 			WithObjects(secretWithKeys, anotherNamespace).

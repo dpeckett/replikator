@@ -149,7 +149,7 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 
 	var keyFilters []string
 	if secret.Annotations != nil {
-		if replicatedKeysAnnotation, ok := secret.Annotations[constants.AnnotationReplicatedKeysKey]; ok {
+		if replicatedKeysAnnotation, ok := secret.Annotations[constants.AnnotationReplicateKeysKey]; ok {
 			keyFilters = strings.Split(replicatedKeysAnnotation, ",")
 		}
 	}

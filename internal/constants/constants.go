@@ -24,10 +24,10 @@ const (
 	// The value of this annotation should be a comma-separated list of values / glob patterns.
 	// If this annotation is not present, the secret will be replicated to all namespaces.
 	AnnotationReplicateToKey = "v1alpha1.tls-replicator.gpuninja.com/replicate-to"
-	// AnnotationReplicatedKeysKey is the annotation that specifies the keys to replicate.
+	// AnnotationReplicateKeysKey is the annotation that specifies the keys to replicate.
 	// The value of this annotation should be a comma-separated list of values / glob patterns.
 	// If this annotation is not present, all keys will be replicated.
-	AnnotationReplicatedKeysKey = "v1alpha1.tls-replicator.gpuninja.com/replicated-keys"
+	AnnotationReplicateKeysKey = "v1alpha1.tls-replicator.gpuninja.com/replicate-keys"
 	// FinalizerName is the name of the finalizer that will be added to the secret.
 	FinalizerName = "finalizer.tls-replicator.gpu-ninja.com/secret"
 )

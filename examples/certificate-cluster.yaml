@@ -13,4 +13,4 @@ spec:
   secretTemplate:
     annotations:
       v1alpha1.tls-replicator.gpuninja.com/enabled: "true"
-      v1alpha1.tls-replicator.gpuninja.com/replicated-keys: "ca.crt"
+      v1alpha1.tls-replicator.gpuninja.com/replicate-keys: "ca.crt"
