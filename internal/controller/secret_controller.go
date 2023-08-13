@@ -22,25 +22,27 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/gpu-ninja/operator-utils/zaplogr"
 	"github.com/gpu-ninja/tls-replicator/internal/constants"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 )
 
 // Allow reading of namespaces.
 // +kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch
 
-//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups="",resources=secrets/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups="",resources=secrets/finalizers,verbs=update
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=secrets/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups="",resources=secrets/finalizers,verbs=update
 
 type SecretReconciler struct {
 	client.Client
@@ -249,19 +251,42 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		}
 	}
 
-	// Periodically revisit the secret to ensure that namespaces have not been added or
-	// removed, etc. Should perhaps add a namespace watcher but this is a simple solution
-	// for now.
-	return ctrl.Result{
-		RequeueAfter: 30 * time.Second,
-	}, nil
+	return ctrl.Result{}, nil
 }
 
 func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("secret-controller").
 		For(&corev1.Secret{}).
-		Owns(&corev1.Namespace{}).
+		// Requeue when a namespace is created.
+		Watches(&corev1.Namespace{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []ctrl.Request {
+			logger := zaplogr.FromContext(ctx)
+
+			// Ignore deletions (there's nothing we need to do).
+			if !obj.GetDeletionTimestamp().IsZero() {
+				return nil
+			}
+
+			var secrets corev1.SecretList
+			err := r.List(ctx, &secrets)
+			if err != nil {
+				logger.Error("Failed to list secrets", zap.Error(err))
+
+				return nil
+			}
+
+			var reqs []ctrl.Request
+			for _, secret := range secrets.Items {
+				reqs = append(reqs, ctrl.Request{
+					NamespacedName: types.NamespacedName{
+						Name:      secret.Name,
+						Namespace: secret.Namespace,
+					},
+				})
+			}
+
+			return reqs
+		})).
 		Complete(r)
 }
 

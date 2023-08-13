@@ -136,6 +136,38 @@ func main() {
 		logger.Fatal(red("Failed to wait for cluster-tls secret to be replicated"), zap.Error(err))
 	}
 
+	logger.Info("Creating additional test namespace")
+
+	namespace := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "tls-replicator-test",
+		},
+	}
+
+	if _, err := clientset.CoreV1().Namespaces().Create(ctx, namespace, metav1.CreateOptions{}); err != nil {
+		logger.Fatal(red("Failed to create test namespace"), zap.Error(err))
+	}
+
+	logger.Info("Checking that cluster-tls secret is replicated to new namespace")
+
+	err = wait.PollUntilContextTimeout(ctx, 5*time.Second, 5*time.Minute, true, func(ctx context.Context) (bool, error) {
+		_, err := clientset.CoreV1().Secrets("tls-replicator-test").Get(ctx, "cluster-tls", metav1.GetOptions{})
+		if err != nil {
+			if !apierrors.IsNotFound(err) {
+				return false, err
+			}
+
+			logger.Info("Not yet replicated")
+
+			return false, nil
+		}
+
+		return true, nil
+	})
+	if err != nil {
+		logger.Fatal(red("Failed to wait for cluster-tls secret to be replicated"), zap.Error(err))
+	}
+
 	logger.Info(green("Successfully replicated cluster-tls secret"))
 }
 
