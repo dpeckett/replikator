@@ -18,16 +18,16 @@
 package constants
 
 const (
-	// AnnotationEnabled is the annotation that enables the TLS replicator.
-	AnnotationEnabled = "v1alpha1.tls-replicator.gpuninja.com/enabled"
-	// AnnotationReplicateTo is the annotation that specifies the target namespace/s to replicate to.
+	// AnnotationEnabledKey is the annotation that enables the TLS replicator.
+	AnnotationEnabledKey = "v1alpha1.tls-replicator.gpuninja.com/enabled"
+	// AnnotationReplicateToKey is the annotation that specifies the target namespace/s to replicate to.
 	// The value of this annotation should be a comma-separated list of values / glob patterns.
 	// If this annotation is not present, the secret will be replicated to all namespaces.
-	AnnotationReplicateTo = "v1alpha1.tls-replicator.gpuninja.com/replicate-to"
-	// AnnotationReplicatedKeys is the annotation that specifies the keys to replicate.
+	AnnotationReplicateToKey = "v1alpha1.tls-replicator.gpuninja.com/replicate-to"
+	// AnnotationReplicatedKeysKey is the annotation that specifies the keys to replicate.
 	// The value of this annotation should be a comma-separated list of values / glob patterns.
 	// If this annotation is not present, all keys will be replicated.
-	AnnotationReplicatedKeys = "v1alpha1.tls-replicator.gpuninja.com/replicated-keys"
+	AnnotationReplicatedKeysKey = "v1alpha1.tls-replicator.gpuninja.com/replicated-keys"
 	// FinalizerName is the name of the finalizer that will be added to the secret.
 	FinalizerName = "finalizer.tls-replicator.gpu-ninja.com/secret"
 )

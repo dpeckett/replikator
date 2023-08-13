@@ -27,3 +27,5 @@ kapp deploy -a tls-replicator -f https://github.com/gpu-ninja/tls-replicator/rel
 ## Usage
 
 Refer to the [examples](./examples) directory for how to use the replicator to replicate a certificate authority secret across namespaces.
+
+For available configuration options, refer to the [constants](./internal/constants/constants.go) file.

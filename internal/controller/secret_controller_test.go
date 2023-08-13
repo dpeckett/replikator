@@ -45,7 +45,7 @@ func TestSecretReconciler(t *testing.T) {
 			Name:      "test-secret",
 			Namespace: "test-namespace",
 			Annotations: map[string]string{
-				constants.AnnotationEnabled: "true",
+				constants.AnnotationEnabledKey: "true",
 			},
 		},
 		Type: corev1.SecretTypeTLS,
@@ -95,7 +95,7 @@ func TestSecretReconciler(t *testing.T) {
 
 	t.Run("Should Not Replicate When Not Enabled", func(t *testing.T) {
 		unreplicateSecret := secret.DeepCopy()
-		delete(unreplicateSecret.Annotations, constants.AnnotationEnabled)
+		delete(unreplicateSecret.Annotations, constants.AnnotationEnabledKey)
 
 		client := fake.NewClientBuilder().
 			WithObjects(unreplicateSecret, anotherNamespace).
@@ -126,7 +126,7 @@ func TestSecretReconciler(t *testing.T) {
 
 	t.Run("Should Only Replicate Specified Keys", func(t *testing.T) {
 		secretWithKeys := secret.DeepCopy()
-		secretWithKeys.Annotations[constants.AnnotationReplicatedKeys] = "ca*"
+		secretWithKeys.Annotations[constants.AnnotationReplicatedKeysKey] = "ca*"
 
 		client := fake.NewClientBuilder().
 			WithObjects(secretWithKeys, anotherNamespace).
@@ -166,7 +166,7 @@ func TestSecretReconciler(t *testing.T) {
 		}
 
 		secretWithNamespaces := secret.DeepCopy()
-		secretWithNamespaces.Annotations[constants.AnnotationReplicateTo] = "third-*"
+		secretWithNamespaces.Annotations[constants.AnnotationReplicateToKey] = "third-*"
 
 		client := fake.NewClientBuilder().
 			WithObjects(secretWithNamespaces, anotherNamespace, thirdNamespace).

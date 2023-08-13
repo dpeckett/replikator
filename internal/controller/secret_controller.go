@@ -63,7 +63,7 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 
 	var enabled bool
 	if secret.Annotations != nil {
-		if enabledStr, ok := secret.Annotations[constants.AnnotationEnabled]; ok && strings.ToLower(enabledStr) == "true" {
+		if enabledStr, ok := secret.Annotations[constants.AnnotationEnabledKey]; ok && strings.ToLower(enabledStr) == "true" {
 			enabled = true
 		}
 	}
@@ -149,14 +149,14 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 
 	var keyFilters []string
 	if secret.Annotations != nil {
-		if replicatedKeysAnnotation, ok := secret.Annotations[constants.AnnotationReplicatedKeys]; ok {
+		if replicatedKeysAnnotation, ok := secret.Annotations[constants.AnnotationReplicatedKeysKey]; ok {
 			keyFilters = strings.Split(replicatedKeysAnnotation, ",")
 		}
 	}
 
 	var namespaceFilters []string
 	if secret.Annotations != nil {
-		if replicateTo, ok := secret.Annotations[constants.AnnotationReplicateTo]; ok {
+		if replicateTo, ok := secret.Annotations[constants.AnnotationReplicateToKey]; ok {
 			namespaceFilters = strings.Split(replicateTo, ",")
 		}
 	}
