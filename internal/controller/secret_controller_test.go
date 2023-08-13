@@ -81,7 +81,7 @@ func TestSecretReconciler(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
-		assert.Zero(t, resp)
+		assert.NotZero(t, resp.RequeueAfter)
 
 		var replicatedSecret corev1.Secret
 		err = client.Get(ctx, types.NamespacedName{
@@ -144,7 +144,7 @@ func TestSecretReconciler(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
-		assert.Zero(t, resp)
+		assert.NotZero(t, resp.RequeueAfter)
 
 		var replicatedSecret corev1.Secret
 		err = client.Get(ctx, types.NamespacedName{
@@ -184,7 +184,7 @@ func TestSecretReconciler(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
-		assert.Zero(t, resp)
+		assert.NotZero(t, resp.RequeueAfter)
 
 		var replicatedSecret corev1.Secret
 		err = client.Get(ctx, types.NamespacedName{
