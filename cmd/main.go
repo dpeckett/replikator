@@ -36,8 +36,6 @@ import (
 	"github.com/gpu-ninja/operator-utils/zaplogr"
 	"github.com/gpu-ninja/tls-replicator/internal/controller"
 	zaplogfmt "github.com/jsternberg/zap-logfmt"
-
-	dexv1alpha1 "github.com/gpu-ninja/dex-operator/api/v1alpha1"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -47,8 +45,6 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-
-	utilruntime.Must(dexv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 

@@ -3,7 +3,6 @@ module github.com/gpu-ninja/tls-replicator
 go 1.20
 
 require (
-	github.com/gpu-ninja/dex-operator v0.4.1
 	github.com/gpu-ninja/operator-utils v0.3.2
 	github.com/jsternberg/zap-logfmt v1.3.0
 	github.com/stretchr/testify v1.8.4
