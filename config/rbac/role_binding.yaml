@@ -5,14 +5,14 @@ metadata:
     app.kubernetes.io/name: serviceaccount
     app.kubernetes.io/instance: controller-manager-sa
     app.kubernetes.io/component: rbac
-    app.kubernetes.io/created-by: tls-replicator
-    app.kubernetes.io/part-of: tls-replicator
-  name: tls-replicator-manager-rolebinding
+    app.kubernetes.io/created-by: replikator
+    app.kubernetes.io/part-of: replikator
+  name: replikator-manager-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: tls-replicator-manager-role
+  name: replikator-manager-role
 subjects:
 - kind: ServiceAccount
   name: controller-manager
-  namespace: tls-replicator
+  namespace: replikator

@@ -4,8 +4,8 @@ metadata:
   labels:
     control-plane: controller-manager
     app.kubernetes.io/name: namespace
-    app.kubernetes.io/instance: tls-replicator
+    app.kubernetes.io/instance: replikator
     app.kubernetes.io/component: manager
-    app.kubernetes.io/created-by: tls-replicator
-    app.kubernetes.io/part-of: tls-replicator
-  name: tls-replicator
+    app.kubernetes.io/created-by: replikator
+    app.kubernetes.io/part-of: replikator
+  name: replikator

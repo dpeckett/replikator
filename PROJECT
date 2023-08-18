@@ -5,6 +5,6 @@
 domain: gpu-ninja.com
 layout:
 - go.kubebuilder.io/v4
-projectName: tls-replicator
-repo: github.com/gpu-ninja/tls-replicator
+projectName: replikator
+repo: github.com/gpu-ninja/replikator
 version: "3"

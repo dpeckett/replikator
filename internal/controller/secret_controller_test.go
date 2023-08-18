@@ -22,8 +22,7 @@ import (
 	"testing"
 
 	"github.com/gpu-ninja/operator-utils/zaplogr"
-	"github.com/gpu-ninja/tls-replicator/internal/constants"
-	"github.com/gpu-ninja/tls-replicator/internal/controller"
+	"github.com/gpu-ninja/replikator/internal/controller"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
@@ -45,7 +44,7 @@ func TestSecretReconciler(t *testing.T) {
 			Name:      "test-secret",
 			Namespace: "test-namespace",
 			Annotations: map[string]string{
-				constants.AnnotationEnabledKey: "true",
+				controller.AnnotationEnabledKey: "true",
 			},
 		},
 		Type: corev1.SecretTypeTLS,
@@ -95,7 +94,7 @@ func TestSecretReconciler(t *testing.T) {
 
 	t.Run("Should Not Replicate When Not Enabled", func(t *testing.T) {
 		unreplicateSecret := secret.DeepCopy()
-		delete(unreplicateSecret.Annotations, constants.AnnotationEnabledKey)
+		delete(unreplicateSecret.Annotations, controller.AnnotationEnabledKey)
 
 		client := fake.NewClientBuilder().
 			WithObjects(unreplicateSecret, anotherNamespace).
@@ -126,7 +125,7 @@ func TestSecretReconciler(t *testing.T) {
 
 	t.Run("Should Only Replicate Specified Keys", func(t *testing.T) {
 		secretWithKeys := secret.DeepCopy()
-		secretWithKeys.Annotations[constants.AnnotationReplicateKeysKey] = "ca*"
+		secretWithKeys.Annotations[controller.AnnotationReplicateKeysKey] = "ca*"
 
 		client := fake.NewClientBuilder().
 			WithObjects(secretWithKeys, anotherNamespace).
@@ -166,7 +165,7 @@ func TestSecretReconciler(t *testing.T) {
 		}
 
 		secretWithNamespaces := secret.DeepCopy()
-		secretWithNamespaces.Annotations[constants.AnnotationReplicateToKey] = "third-*"
+		secretWithNamespaces.Annotations[controller.AnnotationReplicateToKey] = "third-*"
 
 		client := fake.NewClientBuilder().
 			WithObjects(secretWithNamespaces, anotherNamespace, thirdNamespace).

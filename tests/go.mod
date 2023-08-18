@@ -1,4 +1,4 @@
-module github.com/gpu-ninja/tls-replicator/tests
+module github.com/gpu-ninja/replikator/tests
 
 go 1.20
 

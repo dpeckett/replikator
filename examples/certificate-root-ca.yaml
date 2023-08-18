@@ -1,16 +1,16 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: cluster
+  name: root-ca
   namespace: cert-manager
 spec:
   isCA: true
-  secretName: cluster-tls
+  secretName: root-ca-tls
   issuerRef:
     name: selfsigned
     kind: ClusterIssuer
   commonName: Cluster CA
   secretTemplate:
     annotations:
-      v1alpha1.tls-replicator.gpuninja.com/enabled: "true"
-      v1alpha1.tls-replicator.gpuninja.com/replicate-keys: "ca.crt"
+      v1alpha1.replikator.gpuninja.com/enabled: "true"
+      v1alpha1.replikator.gpuninja.com/replicate-keys: "ca.crt"

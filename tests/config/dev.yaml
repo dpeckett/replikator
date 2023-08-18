@@ -7,4 +7,4 @@ spec:
     spec:
       containers:
       #@overlay/match by=overlay.all
-      - image: ghcr.io/gpu-ninja/tls-replicator:latest-dev
+      - image: ghcr.io/gpu-ninja/replikator:latest-dev

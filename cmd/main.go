@@ -34,7 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
 	"github.com/gpu-ninja/operator-utils/zaplogr"
-	"github.com/gpu-ninja/tls-replicator/internal/controller"
+	"github.com/gpu-ninja/replikator/internal/controller"
 	zaplogfmt "github.com/jsternberg/zap-logfmt"
 	//+kubebuilder:scaffold:imports
 )

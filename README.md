@@ -1,8 +1,8 @@
-# TLS Replicator
+# Replikator
 
-A simple operator to replicate Kubernetes TLS secrets across namespaces.
+A simple operator to replicate Kubernetes secrets across namespaces.
 
-Why? Because the off the shelf options couldn't seem to do something as simple as replicating only the certificate authority data and not the private key.
+Why? Because none of the existing solutions seemed to be able to selectively replicate subkeys, particularly the `ca.crt` of a `kubernetes.io/tls` secret.
 
 ## Getting Started
 
@@ -18,10 +18,10 @@ Why? Because the off the shelf options couldn't seem to do something as simple a
 kapp deploy -a cert-manager -f https://github.com/cert-manager/cert-manager/releases/download/v1.12.0/cert-manager.yaml
 ```
 
-#### TLS Replicator
+#### Replikator
 
 ```shell
-kapp deploy -a tls-replicator -f https://github.com/gpu-ninja/tls-replicator/releases/latest/download/tls-replicator.yaml
+kapp deploy -a replikator -f https://github.com/gpu-ninja/replikator/releases/latest/download/replikator.yaml
 ```
 
 ## Usage

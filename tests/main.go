@@ -56,14 +56,14 @@ func main() {
 
 	buildContextPath := filepath.Clean(filepath.Join(pwd, ".."))
 
-	imageName := "ghcr.io/gpu-ninja/tls-replicator:latest-dev"
+	imageName := "ghcr.io/gpu-ninja/replikator:latest-dev"
 	if err := buildOperatorImage(buildContextPath, "Dockerfile", imageName); err != nil {
 		logger.Fatal(red("Failed to build operator image"), zap.Error(err))
 	}
 
 	logger.Info("Creating k3d cluster")
 
-	clusterName := "tls-replicator-test"
+	clusterName := "replikator-test"
 	if err := createK3dCluster(clusterName); err != nil {
 		logger.Fatal(red("Failed to create k3d cluster"), zap.Error(err))
 	}
@@ -88,8 +88,7 @@ func main() {
 		logger.Fatal(red("Failed to install cert-manager"), zap.Error(err))
 	}
 
-	overrideYAMLPath := filepath.Join(pwd, "config/dev.yaml")
-	if err := installOperator(overrideYAMLPath, filepath.Join(pwd, "../config")); err != nil {
+	if err := installOperator(filepath.Join(pwd, "../config")); err != nil {
 		logger.Fatal(red("Failed to install operator"), zap.Error(err))
 	}
 
@@ -110,11 +109,11 @@ func main() {
 		logger.Fatal(red("Failed to create kubernetes clientset"), zap.Error(err))
 	}
 
-	logger.Info("Waiting for cluster-tls to be replicated")
+	logger.Info("Waiting for root-ca-tls secret to be replicated")
 
 	ctx := context.Background()
 	err = wait.PollUntilContextTimeout(ctx, 5*time.Second, 5*time.Minute, true, func(ctx context.Context) (bool, error) {
-		secret, err := clientset.CoreV1().Secrets("default").Get(ctx, "cluster-tls", metav1.GetOptions{})
+		secret, err := clientset.CoreV1().Secrets("default").Get(ctx, "root-ca-tls", metav1.GetOptions{})
 		if err != nil {
 			if !apierrors.IsNotFound(err) {
 				return false, err
@@ -127,20 +126,20 @@ func main() {
 
 		valid := len(secret.Data["ca.crt"]) > 0 && len(secret.Data[corev1.TLSCertKey]) == 0 && len(secret.Data[corev1.TLSPrivateKeyKey]) == 0
 		if !valid {
-			return false, fmt.Errorf("cluster-tls secret is not valid")
+			return false, fmt.Errorf("root-ca-tls secret is not valid")
 		}
 
 		return true, nil
 	})
 	if err != nil {
-		logger.Fatal(red("Failed to wait for cluster-tls secret to be replicated"), zap.Error(err))
+		logger.Fatal(red("Failed to wait for root-ca-tls secret to be replicated"), zap.Error(err))
 	}
 
 	logger.Info("Creating additional test namespace")
 
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "tls-replicator-test",
+			Name: "replikator-test",
 		},
 	}
 
@@ -148,10 +147,10 @@ func main() {
 		logger.Fatal(red("Failed to create test namespace"), zap.Error(err))
 	}
 
-	logger.Info("Checking that cluster-tls secret is replicated to new namespace")
+	logger.Info("Checking that root-ca-tls secret is replicated to new namespace")
 
 	err = wait.PollUntilContextTimeout(ctx, 5*time.Second, 5*time.Minute, true, func(ctx context.Context) (bool, error) {
-		_, err := clientset.CoreV1().Secrets("tls-replicator-test").Get(ctx, "cluster-tls", metav1.GetOptions{})
+		_, err := clientset.CoreV1().Secrets("replikator-test").Get(ctx, "root-ca-tls", metav1.GetOptions{})
 		if err != nil {
 			if !apierrors.IsNotFound(err) {
 				return false, err
@@ -165,10 +164,10 @@ func main() {
 		return true, nil
 	})
 	if err != nil {
-		logger.Fatal(red("Failed to wait for cluster-tls secret to be replicated"), zap.Error(err))
+		logger.Fatal(red("Failed to wait for root-ca-tls secret to be replicated"), zap.Error(err))
 	}
 
-	logger.Info(green("Successfully replicated cluster-tls secret"))
+	logger.Info(green("Successfully replicated root-ca-tls secret"))
 }
 
 func buildOperatorImage(buildContextPath, relDockerfilePath, image string) error {
@@ -213,14 +212,14 @@ func installCertManager(certManagerVersion string) error {
 	return cmd.Run()
 }
 
-func installOperator(overrideYAMLPath, configDir string) error {
-	cmd := exec.Command("ytt", "-f", overrideYAMLPath, "-f", configDir)
+func installOperator(configDir string) error {
+	cmd := exec.Command("ytt", "-f", "config", "-f", configDir)
 	patchedYAML, err := cmd.CombinedOutput()
 	if err != nil {
 		return err
 	}
 
-	cmd = exec.Command("kapp", "deploy", "-y", "-a", "tls-replicator", "-f", "-")
+	cmd = exec.Command("kapp", "deploy", "-y", "-a", "replikator", "-f", "-")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = bytes.NewReader(patchedYAML)
@@ -229,7 +228,7 @@ func installOperator(overrideYAMLPath, configDir string) error {
 }
 
 func createExampleResources(examplesDir string) error {
-	cmd := exec.Command("kapp", "deploy", "-y", "-a", "tls-replicator-examples", "-f", examplesDir)
+	cmd := exec.Command("kapp", "deploy", "-y", "-a", "replikator-examples", "-f", examplesDir)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 

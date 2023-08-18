@@ -23,8 +23,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/gpu-ninja/operator-utils/updater"
 	"github.com/gpu-ninja/operator-utils/zaplogr"
-	"github.com/gpu-ninja/tls-replicator/internal/constants"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -43,6 +43,21 @@ import (
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=secrets/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups="",resources=secrets/finalizers,verbs=update
+
+const (
+	// AnnotationEnabledKey is the annotation that enables secret replication.
+	AnnotationEnabledKey = "v1alpha1.replikator.gpuninja.com/enabled"
+	// AnnotationReplicateToKey is the annotation that specifies the target namespace/s to replicate to.
+	// The value of this annotation should be a comma-separated list of values / glob patterns.
+	// If this annotation is not present, the secret will be replicated to all namespaces.
+	AnnotationReplicateToKey = "v1alpha1.replikator.gpuninja.com/replicate-to"
+	// AnnotationReplicateKeysKey is the annotation that specifies the keys to replicate.
+	// The value of this annotation should be a comma-separated list of values / glob patterns.
+	// If this annotation is not present, all keys will be replicated.
+	AnnotationReplicateKeysKey = "v1alpha1.replikator.gpuninja.com/replicate-keys"
+	// FinalizerName is the name of the finalizer that will be added to the secret.
+	FinalizerName = "finalizer.replikator.gpu-ninja.com/secret"
+)
 
 type SecretReconciler struct {
 	client.Client
@@ -65,22 +80,22 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 
 	var enabled bool
 	if secret.Annotations != nil {
-		if enabledStr, ok := secret.Annotations[constants.AnnotationEnabledKey]; ok && strings.ToLower(enabledStr) == "true" {
+		if enabledStr, ok := secret.Annotations[AnnotationEnabledKey]; ok && strings.ToLower(enabledStr) == "true" {
 			enabled = true
 		}
 	}
 
 	if !enabled {
-		logger.Info("Not enabled")
+		logger.Info("Replication not enabled")
 
 		return ctrl.Result{}, nil
 	}
 
-	if !controllerutil.ContainsFinalizer(&secret, constants.FinalizerName) {
+	if !controllerutil.ContainsFinalizer(&secret, FinalizerName) {
 		logger.Info("Adding Finalizer")
 
 		_, err := controllerutil.CreateOrPatch(ctx, r.Client, &secret, func() error {
-			controllerutil.AddFinalizer(&secret, constants.FinalizerName)
+			controllerutil.AddFinalizer(&secret, FinalizerName)
 
 			return nil
 		})
@@ -94,20 +109,20 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ctrl.Result{}, fmt.Errorf("failed to list namespaces: %w", err)
 	}
 
-	var existingReplicatedSecrets []corev1.Secret
+	var existingSecrets []corev1.Secret
 	for _, namespace := range namespaces.Items {
 		if namespace.Name == secret.Namespace {
 			continue
 		}
 
-		replicatedSecret := corev1.Secret{
+		secret := corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      secret.Name,
 				Namespace: namespace.Name,
 			},
 		}
 
-		if err := r.Get(ctx, client.ObjectKeyFromObject(&replicatedSecret), &replicatedSecret); err != nil {
+		if err := r.Get(ctx, client.ObjectKeyFromObject(&secret), &secret); err != nil {
 			if apierrors.IsNotFound(err) {
 				continue
 			}
@@ -115,14 +130,14 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			return ctrl.Result{}, fmt.Errorf("failed to check for replicated secret: %w", err)
 		}
 
-		existingReplicatedSecrets = append(existingReplicatedSecrets, replicatedSecret)
+		existingSecrets = append(existingSecrets, secret)
 	}
 
 	if !secret.GetDeletionTimestamp().IsZero() {
 		logger.Info("Deleting")
 
-		for _, replicatedSecret := range existingReplicatedSecrets {
-			if err := r.Delete(ctx, &replicatedSecret); err != nil {
+		for _, secret := range existingSecrets {
+			if err := r.Delete(ctx, &secret); err != nil {
 				if apierrors.IsNotFound(err) {
 					continue
 				}
@@ -131,11 +146,11 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			}
 		}
 
-		if controllerutil.ContainsFinalizer(&secret, constants.FinalizerName) {
+		if controllerutil.ContainsFinalizer(&secret, FinalizerName) {
 			logger.Info("Removing Finalizer")
 
 			_, err := controllerutil.CreateOrPatch(ctx, r.Client, &secret, func() error {
-				controllerutil.RemoveFinalizer(&secret, constants.FinalizerName)
+				controllerutil.RemoveFinalizer(&secret, FinalizerName)
 
 				return nil
 			})
@@ -151,19 +166,55 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 
 	var keyFilters []string
 	if secret.Annotations != nil {
-		if replicatedKeysAnnotation, ok := secret.Annotations[constants.AnnotationReplicateKeysKey]; ok {
+		if replicatedKeysAnnotation, ok := secret.Annotations[AnnotationReplicateKeysKey]; ok {
 			keyFilters = strings.Split(replicatedKeysAnnotation, ",")
+		}
+	}
+
+	template := corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   secret.Name,
+			Labels: make(map[string]string),
+		},
+		Type: secret.Type,
+		Data: make(map[string][]byte),
+	}
+
+	for key, value := range secret.ObjectMeta.Labels {
+		template.ObjectMeta.Labels[key] = value
+	}
+
+	template.ObjectMeta.Labels["app.kubernetes.io/managed-by"] = "replikator"
+
+	// For tls secrets, we need to ensure that the cert and private key are present.
+	if secret.Type == corev1.SecretTypeTLS {
+		template.Data[corev1.TLSCertKey] = []byte("")
+		template.Data[corev1.TLSPrivateKeyKey] = []byte("")
+	}
+
+	for key, value := range secret.Data {
+		if len(keyFilters) > 0 {
+			for _, keyFilter := range keyFilters {
+				if ok, err := filepath.Match(keyFilter, key); err != nil {
+					return ctrl.Result{}, fmt.Errorf("failed to evaluate key filter: %w", err)
+				} else if ok {
+					template.Data[key] = value
+					break
+				}
+			}
+		} else {
+			template.Data[key] = value
 		}
 	}
 
 	var namespaceFilters []string
 	if secret.Annotations != nil {
-		if replicateTo, ok := secret.Annotations[constants.AnnotationReplicateToKey]; ok {
+		if replicateTo, ok := secret.Annotations[AnnotationReplicateToKey]; ok {
 			namespaceFilters = strings.Split(replicateTo, ",")
 		}
 	}
 
-	var desiredReplicatedSecrets []corev1.Secret
+	var desiredSecrets []corev1.Secret
 	for _, namespace := range namespaces.Items {
 		if namespace.Name == secret.Namespace {
 			continue
@@ -184,19 +235,17 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		}
 
 		if replicate {
-			desiredReplicatedSecrets = append(desiredReplicatedSecrets, corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      secret.Name,
-					Namespace: namespace.Name,
-				},
-			})
+			secret := template.DeepCopy()
+			secret.ObjectMeta.Namespace = namespace.Name
+
+			desiredSecrets = append(desiredSecrets, *secret)
 		}
 	}
 
-	removedSecrets, addedSecrets := diffSecrets(existingReplicatedSecrets, desiredReplicatedSecrets)
+	removedSecrets, addedSecrets := diffSecrets(existingSecrets, desiredSecrets)
 
-	for _, replicatedSecret := range removedSecrets {
-		if err := r.Delete(ctx, &replicatedSecret); err != nil {
+	for _, secret := range removedSecrets {
+		if err := r.Delete(ctx, &secret); err != nil {
 			if apierrors.IsNotFound(err) {
 				continue
 			}
@@ -205,48 +254,8 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		}
 	}
 
-	for _, replicatedSecret := range addedSecrets {
-		_, err := controllerutil.CreateOrPatch(ctx, r.Client, &replicatedSecret, func() error {
-			if secret.Labels != nil {
-				if replicatedSecret.Labels == nil {
-					replicatedSecret.Labels = map[string]string{}
-				}
-
-				for key, value := range secret.Labels {
-					replicatedSecret.Labels[key] = value
-				}
-			}
-
-			replicatedSecret.Type = secret.Type
-
-			if replicatedSecret.Data == nil {
-				replicatedSecret.Data = map[string][]byte{}
-			}
-
-			// For tls secrets, we need to ensure that the cert and private key are present.
-			if secret.Type == corev1.SecretTypeTLS {
-				replicatedSecret.Data[corev1.TLSCertKey] = []byte("")
-				replicatedSecret.Data[corev1.TLSPrivateKeyKey] = []byte("")
-			}
-
-			for key, value := range secret.Data {
-				if len(keyFilters) > 0 {
-					for _, keyFilter := range keyFilters {
-						if ok, err := filepath.Match(keyFilter, key); err != nil {
-							return fmt.Errorf("failed to evaluate key filter: %w", err)
-						} else if ok {
-							replicatedSecret.Data[key] = value
-							break
-						}
-					}
-				} else {
-					replicatedSecret.Data[key] = value
-				}
-			}
-
-			return nil
-		})
-		if err != nil {
+	for _, secret := range addedSecrets {
+		if _, err := updater.CreateOrUpdateFromTemplate(ctx, r.Client, &secret); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to replicate secret: %w", err)
 		}
 	}

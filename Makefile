@@ -16,7 +16,7 @@ $(LOCALBIN)/manager: $(SRCS) $(LOCALBIN)
 
 generate: $(CONTROLLER_GEN)
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
-	$(CONTROLLER_GEN) rbac:roleName=tls-replicator-manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	$(CONTROLLER_GEN) rbac:roleName=replikator-manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 tidy: $(SRCS)
 	go mod tidy
@@ -35,9 +35,9 @@ clean:
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
-bundle: $(KBLD) bundle/tls-replicator.yaml
+bundle: $(KBLD) bundle/replikator.yaml
 
-bundle/tls-replicator.yaml: $(KBLD) generate
+bundle/replikator.yaml: $(KBLD) generate
 	-mkdir -p bundle
 	$(KBLD) -f config > $@
 
