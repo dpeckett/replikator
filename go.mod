@@ -6,7 +6,7 @@ go 1.20
 replace k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20230525220651-2546d827e515
 
 require (
-	github.com/gpu-ninja/operator-utils v0.4.1
+	github.com/gpu-ninja/operator-utils v0.4.2
 	github.com/jsternberg/zap-logfmt v1.3.0
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/zap v1.25.0

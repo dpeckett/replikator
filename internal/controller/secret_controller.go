@@ -56,7 +56,7 @@ const (
 	// If this annotation is not present, all keys will be replicated.
 	AnnotationReplicateKeysKey = "v1alpha1.replikator.gpuninja.com/replicate-keys"
 	// FinalizerName is the name of the finalizer that will be added to the secret.
-	FinalizerName = "finalizer.replikator.gpu-ninja.com/secret"
+	FinalizerName = "replikator.gpu-ninja.com/finalizer"
 )
 
 type SecretReconciler struct {
