@@ -76,6 +76,8 @@ github.com/gpu-ninja/operator-utils v0.4.1 h1:DNCvPPiKCGV6seXGRcbIUhPf/umBful0WH
 github.com/gpu-ninja/operator-utils v0.4.1/go.mod h1:YJqCBFA5e0s+uyNeZauSv8KJJr1TtQ6GNThFz/UDpKc=
 github.com/gpu-ninja/operator-utils v0.4.2 h1:lZlDGBL4BduIcBXtxSR5JOUaiBUjR6b9YqPkdUKVjHk=
 github.com/gpu-ninja/operator-utils v0.4.2/go.mod h1:YJqCBFA5e0s+uyNeZauSv8KJJr1TtQ6GNThFz/UDpKc=
+github.com/gpu-ninja/operator-utils v0.4.3 h1:fG/UxDWLCBrL494ym1O6GIKfUZdlq9Lw6RwX96DUsys=
+github.com/gpu-ninja/operator-utils v0.4.3/go.mod h1:YJqCBFA5e0s+uyNeZauSv8KJJr1TtQ6GNThFz/UDpKc=
 github.com/imdario/mergo v0.3.13 h1:lFzP57bqS/wsqKssCGmtLAb8A0wKjLGrve2q3PPVcBk=
 github.com/imdario/mergo v0.3.13/go.mod h1:4lJ1jqUDcsbIECGy0RUJAXNIhg+6ocWgb1ALK2O4oXg=
 github.com/jessevdk/go-flags v1.4.0/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
