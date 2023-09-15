@@ -20,7 +20,9 @@ docker:
 bundle:
   FROM +tools
   COPY config ./config
-  RUN kbld -f config > replikator.yaml
+  COPY hack ./hack
+  ARG VERSION
+  RUN ytt --data-value version=${VERSION} -f config -f hack/set-version.yaml | kbld -f - > replikator.yaml
   SAVE ARTIFACT ./replikator.yaml AS LOCAL dist/replikator.yaml
 
 replikator:
