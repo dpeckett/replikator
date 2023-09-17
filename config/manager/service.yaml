@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: replikator-metrics
+  namespace: replikator
+spec:
+  selector:
+    app.kubernetes.io/name: replikator
+    app.kubernetes.io/component: metrics
+  ports:
+    - name: metrics
+      protocol: TCP
+      port: 8080
+      targetPort: 8080

@@ -1,0 +1,16 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: replikator
+  namespace: replikator
+  labels:
+    app.kubernetes.io/name: replikator
+    app.kubernetes.io/component: metrics
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: replikator
+      app.kubernetes.io/component: metrics
+  endpoints:
+  - port: metrics
+    interval: 30s
