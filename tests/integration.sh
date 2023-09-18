@@ -48,6 +48,10 @@ echo 'Installing Prometheus CRDs'
 
 kapp deploy -y -a prometheus-crds -f "https://github.com/prometheus-operator/prometheus-operator/releases/download/${PROMETHEUS_VERSION}/stripped-down-crds.yaml"
 
+echo 'Installing Cert Manager'
+
+kapp deploy -y -a cert-manager -f "https://github.com/cert-manager/cert-manager/releases/download/${CERT_MANAGER_VERSION}/cert-manager.yaml"
+
 echo 'Loading operator image into cluster'
 
 k3d image import -c "${CLUSTER_NAME}" ghcr.io/gpu-ninja/replikator:latest-dev
