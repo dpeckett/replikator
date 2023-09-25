@@ -26,7 +26,7 @@ kapp deploy -y -a cert-manager -f "https://github.com/cert-manager/cert-manager/
 #### Operator
 
 ```shell
-kapp deploy -a replikator -f https://github.com/gpu-ninja/replikator/releases/latest/download/replikator.yaml
+kapp deploy -y -a replikator -f https://github.com/gpu-ninja/replikator/releases/latest/download/replikator.yaml
 ```
 
 ### Secret Replication
