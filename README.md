@@ -8,24 +8,31 @@ Why? Because none of the existing solutions seemed to be able to selectively rep
 
 ### Prerequisites
 
+* [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
 * [kapp](https://carvel.dev/kapp/)
 
 ### Installing
 
-#### Cert-Manager
+#### Dependencies
 
 ```shell
-kapp deploy -a cert-manager -f https://github.com/cert-manager/cert-manager/releases/download/v1.12.0/cert-manager.yaml
+PROMETHEUS_VERSION="v0.68.0"
+CERT_MANAGER_VERSION="v1.12.0"
+
+kapp deploy -y -a prometheus-crds -f "https://github.com/prometheus-operator/prometheus-operator/releases/download/${PROMETHEUS_VERSION}/stripped-down-crds.yaml"
+kapp deploy -y -a cert-manager -f "https://github.com/cert-manager/cert-manager/releases/download/${CERT_MANAGER_VERSION}/cert-manager.yaml"
 ```
 
-#### Replikator
+#### Operator
 
 ```shell
 kapp deploy -a replikator -f https://github.com/gpu-ninja/replikator/releases/latest/download/replikator.yaml
 ```
 
-## Usage
+### Secret Replication
 
-Refer to the [examples](./examples) directory for how to use the replicator to replicate a certificate authority secret across namespaces.
+#### Replicate a Certificate Authority
 
-For available configuration options, refer to the [constants](./internal/constants/constants.go) file.
+```shell
+kubectl apply -f examples
+```
