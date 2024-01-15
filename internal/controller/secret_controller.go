@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: Apache-2.0
  *
- * Copyright 2023 Damian Peckett <damian@pecke.tt>.
+ * Copyright 2024 Damian Peckett <damian@pecke.tt>.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,12 +20,12 @@ package controller
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"strings"
 
+	"github.com/go-logr/logr"
 	"github.com/gpu-ninja/operator-utils/updater"
-	"github.com/gpu-ninja/operator-utils/zaplogr"
-	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,28 +35,29 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // Allow reading of namespaces.
-// +kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch
+// +kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list;watch
 
-// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups="",resources=secrets/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups="",resources=secrets/finalizers,verbs=update
+// +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=secrets/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=core,resources=secrets/finalizers,verbs=update
 
 const (
 	// AnnotationEnabledKey is the annotation that enables secret replication.
-	AnnotationEnabledKey = "v1alpha1.replikator.gpuninja.com/enabled"
+	AnnotationEnabledKey = "v1alpha1.replikator.pecke.tt/enabled"
 	// AnnotationReplicateToKey is the annotation that specifies the target namespace/s to replicate to.
 	// The value of this annotation should be a comma-separated list of values / glob patterns.
 	// If this annotation is not present, the secret will be replicated to all namespaces.
-	AnnotationReplicateToKey = "v1alpha1.replikator.gpuninja.com/replicate-to"
+	AnnotationReplicateToKey = "v1alpha1.replikator.pecke.tt/replicate-to"
 	// AnnotationReplicateKeysKey is the annotation that specifies the keys to replicate.
 	// The value of this annotation should be a comma-separated list of values / glob patterns.
 	// If this annotation is not present, all keys will be replicated.
-	AnnotationReplicateKeysKey = "v1alpha1.replikator.gpuninja.com/replicate-keys"
+	AnnotationReplicateKeysKey = "v1alpha1.replikator.pecke.tt/replicate-keys"
 	// FinalizerName is the name of the finalizer that will be added to the secret.
-	FinalizerName = "replikator.gpu-ninja.com/finalizer"
+	FinalizerName = "replikator.pecke.tt/finalizer"
 )
 
 type SecretReconciler struct {
@@ -65,7 +66,7 @@ type SecretReconciler struct {
 }
 
 func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := zaplogr.FromContext(ctx)
+	logger := slog.New(logr.ToSlogHandler(log.FromContext(ctx)))
 
 	logger.Info("Reconciling")
 
@@ -109,7 +110,7 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ctrl.Result{}, fmt.Errorf("failed to list namespaces: %w", err)
 	}
 
-	var existingSecrets []corev1.Secret
+	var existingSecrets []*corev1.Secret
 	for _, namespace := range namespaces.Items {
 		if namespace.Name == secret.Namespace {
 			continue
@@ -130,14 +131,14 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			return ctrl.Result{}, fmt.Errorf("failed to check for replicated secret: %w", err)
 		}
 
-		existingSecrets = append(existingSecrets, secret)
+		existingSecrets = append(existingSecrets, &secret)
 	}
 
 	if !secret.GetDeletionTimestamp().IsZero() {
 		logger.Info("Deleting")
 
 		for _, secret := range existingSecrets {
-			if err := r.Delete(ctx, &secret); err != nil {
+			if err := r.Delete(ctx, secret); err != nil {
 				if apierrors.IsNotFound(err) {
 					continue
 				}
@@ -165,10 +166,8 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	logger.Info("Creating or updating")
 
 	var keyFilters []string
-	if secret.Annotations != nil {
-		if replicatedKeysAnnotation, ok := secret.Annotations[AnnotationReplicateKeysKey]; ok {
-			keyFilters = strings.Split(replicatedKeysAnnotation, ",")
-		}
+	if replicatedKeysAnnotation, ok := secret.Annotations[AnnotationReplicateKeysKey]; ok {
+		keyFilters = strings.Split(replicatedKeysAnnotation, ",")
 	}
 
 	template := corev1.Secret{
@@ -208,13 +207,11 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	}
 
 	var namespaceFilters []string
-	if secret.Annotations != nil {
-		if replicateTo, ok := secret.Annotations[AnnotationReplicateToKey]; ok {
-			namespaceFilters = strings.Split(replicateTo, ",")
-		}
+	if replicateTo, ok := secret.Annotations[AnnotationReplicateToKey]; ok {
+		namespaceFilters = strings.Split(replicateTo, ",")
 	}
 
-	var desiredSecrets []corev1.Secret
+	var desiredSecrets []*corev1.Secret
 	for _, namespace := range namespaces.Items {
 		if namespace.Name == secret.Namespace {
 			continue
@@ -238,14 +235,14 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			secret := template.DeepCopy()
 			secret.ObjectMeta.Namespace = namespace.Name
 
-			desiredSecrets = append(desiredSecrets, *secret)
+			desiredSecrets = append(desiredSecrets, secret)
 		}
 	}
 
-	removedSecrets, addedSecrets := diffSecrets(existingSecrets, desiredSecrets)
+	removedSecrets, addedSecrets := diffObjects(existingSecrets, desiredSecrets)
 
 	for _, secret := range removedSecrets {
-		if err := r.Delete(ctx, &secret); err != nil {
+		if err := r.Delete(ctx, secret); err != nil {
 			if apierrors.IsNotFound(err) {
 				continue
 			}
@@ -255,7 +252,7 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	}
 
 	for _, secret := range addedSecrets {
-		if _, err := updater.CreateOrUpdateFromTemplate(ctx, r.Client, &secret); err != nil {
+		if _, err := updater.CreateOrUpdateFromTemplate(ctx, r.Client, secret); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to replicate secret: %w", err)
 		}
 	}
@@ -269,7 +266,7 @@ func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&corev1.Secret{}).
 		// Requeue when a namespace is created.
 		Watches(&corev1.Namespace{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []ctrl.Request {
-			logger := zaplogr.FromContext(ctx)
+			logger := slog.New(logr.ToSlogHandler(log.FromContext(ctx)))
 
 			// Ignore deletions (there's nothing we need to do).
 			if !obj.GetDeletionTimestamp().IsZero() {
@@ -277,9 +274,8 @@ func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			}
 
 			var secrets corev1.SecretList
-			err := r.List(ctx, &secrets)
-			if err != nil {
-				logger.Error("Failed to list secrets", zap.Error(err))
+			if err := r.List(ctx, &secrets); err != nil {
+				logger.Error("Failed to list secrets", "error", err)
 
 				return nil
 			}
@@ -297,36 +293,4 @@ func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			return reqs
 		})).
 		Complete(r)
-}
-
-func diffSecrets(existing, desired []corev1.Secret) (removed, added []corev1.Secret) {
-	for _, existingSecret := range existing {
-		var found bool
-		for _, desiredSecret := range desired {
-			if existingSecret.Namespace == desiredSecret.Namespace {
-				found = true
-				break
-			}
-		}
-
-		if !found {
-			removed = append(removed, existingSecret)
-		}
-	}
-
-	for _, desiredSecret := range desired {
-		var found bool
-		for _, existingSecret := range existing {
-			if existingSecret.Namespace == desiredSecret.Namespace {
-				found = true
-				break
-			}
-		}
-
-		if !found {
-			added = append(added, desiredSecret)
-		}
-	}
-
-	return removed, added
 }

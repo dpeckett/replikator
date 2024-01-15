@@ -24,7 +24,7 @@ spec:
         - /manager
         args:
         - --leader-elect
-        image: ghcr.io/gpu-ninja/replikator:latest
+        image: ghcr.io/dpeckett/replikator:latest
         name: manager
         ports:
         - name: metrics

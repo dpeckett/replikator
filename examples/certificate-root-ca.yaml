@@ -12,5 +12,5 @@ spec:
   commonName: Cluster CA
   secretTemplate:
     annotations:
-      v1alpha1.replikator.gpuninja.com/enabled: "true"
-      v1alpha1.replikator.gpuninja.com/replicate-keys: "ca.crt"
+      v1alpha1.replikator.pecke.tt/enabled: "true"
+      v1alpha1.replikator.pecke.tt/replicate-keys: "ca.crt"

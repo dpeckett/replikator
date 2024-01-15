@@ -54,7 +54,7 @@ kapp deploy -y -a cert-manager -f "https://github.com/cert-manager/cert-manager/
 
 echo 'Loading operator image into cluster'
 
-k3d image import -c "${CLUSTER_NAME}" ghcr.io/gpu-ninja/replikator:latest-dev
+k3d image import -c "${CLUSTER_NAME}" ghcr.io/dpeckett/replikator:latest-dev
 
 echo 'Installing operator'
 

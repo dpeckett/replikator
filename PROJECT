@@ -2,9 +2,9 @@
 # This file is used to track the info used to scaffold your project
 # and allow the plugins properly work.
 # More info: https://book.kubebuilder.io/reference/project-config.html
-domain: gpu-ninja.com
+domain: pecke.tt
 layout:
 - go.kubebuilder.io/v4
 projectName: replikator
-repo: github.com/gpu-ninja/replikator
+repo: github.com/dpeckett/replikator
 version: "3"

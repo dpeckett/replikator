@@ -8,4 +8,4 @@ spec:
     spec:
       containers:
       #@overlay/match by=overlay.subset({"name": "manager"})
-      - image: #@ "ghcr.io/gpu-ninja/replikator:%s" % data.values.version
+      - image: #@ "ghcr.io/dpeckett/replikator:%s" % data.values.version

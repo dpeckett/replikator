@@ -36,22 +36,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func TestSecretReconciler(t *testing.T) {
+func TestConfigMapReconciler(t *testing.T) {
 	ctrl.SetLogger(logr.FromSlogHandler(slogt.New(t).Handler()))
 
-	secret := &corev1.Secret{
+	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-secret",
+			Name:      "test-configmap",
 			Namespace: "test-namespace",
 			Annotations: map[string]string{
 				controller.AnnotationEnabledKey: "true",
 			},
 		},
-		Type: corev1.SecretTypeTLS,
-		Data: map[string][]byte{
-			"tls.crt": []byte("test-crt"),
-			"tls.key": []byte("test-key"),
-			"ca.crt":  []byte("test-ca"),
+		Data: map[string]string{
+			"key":   "test-value",
+			"key-2": "another-test-value",
 		},
 	}
 
@@ -65,96 +63,96 @@ func TestSecretReconciler(t *testing.T) {
 
 	t.Run("Should Replicate When Enabled", func(t *testing.T) {
 		client := fake.NewClientBuilder().
-			WithObjects(secret, anotherNamespace).
+			WithObjects(cm, anotherNamespace).
 			Build()
 
-		r := &controller.SecretReconciler{
+		r := &controller.ConfigMapReconciler{
 			Client: client,
 			Scheme: scheme.Scheme,
 		}
 
 		resp, err := r.Reconcile(ctx, reconcile.Request{
 			NamespacedName: types.NamespacedName{
-				Name:      secret.Name,
-				Namespace: secret.Namespace,
+				Name:      cm.Name,
+				Namespace: cm.Namespace,
 			},
 		})
 		require.NoError(t, err)
 		assert.Zero(t, resp)
 
-		var replicatedSecret corev1.Secret
+		var replicatedConfigMap corev1.ConfigMap
 		err = client.Get(ctx, types.NamespacedName{
-			Name:      secret.Name,
+			Name:      cm.Name,
 			Namespace: anotherNamespace.Name,
-		}, &replicatedSecret)
+		}, &replicatedConfigMap)
 		require.NoError(t, err)
 
-		assert.Equal(t, secret.Data, replicatedSecret.Data)
+		assert.Equal(t, cm.Data, replicatedConfigMap.Data)
 	})
 
 	t.Run("Should Not Replicate When Not Enabled", func(t *testing.T) {
-		unreplicateSecret := secret.DeepCopy()
-		delete(unreplicateSecret.Annotations, controller.AnnotationEnabledKey)
+		unreplicateConfigMap := cm.DeepCopy()
+		delete(unreplicateConfigMap.Annotations, controller.AnnotationEnabledKey)
 
 		client := fake.NewClientBuilder().
-			WithObjects(unreplicateSecret, anotherNamespace).
+			WithObjects(unreplicateConfigMap, anotherNamespace).
 			Build()
 
-		r := &controller.SecretReconciler{
+		r := &controller.ConfigMapReconciler{
 			Client: client,
 			Scheme: scheme.Scheme,
 		}
 
 		resp, err := r.Reconcile(ctx, reconcile.Request{
 			NamespacedName: types.NamespacedName{
-				Name:      unreplicateSecret.Name,
-				Namespace: unreplicateSecret.Namespace,
+				Name:      unreplicateConfigMap.Name,
+				Namespace: unreplicateConfigMap.Namespace,
 			},
 		})
 		require.NoError(t, err)
 		assert.Zero(t, resp)
 
-		var replicatedSecret corev1.Secret
+		var replicatedConfigMap corev1.ConfigMap
 		err = client.Get(ctx, types.NamespacedName{
-			Name:      unreplicateSecret.Name,
+			Name:      unreplicateConfigMap.Name,
 			Namespace: anotherNamespace.Name,
-		}, &replicatedSecret)
+		}, &replicatedConfigMap)
 		require.Error(t, err)
 		assert.True(t, apierrors.IsNotFound(err))
 	})
 
 	t.Run("Should Only Replicate Specified Keys", func(t *testing.T) {
-		secretWithKeys := secret.DeepCopy()
-		secretWithKeys.Annotations[controller.AnnotationReplicateKeysKey] = "ca*"
+		configMapWithKeys := cm.DeepCopy()
+		configMapWithKeys.Annotations[controller.AnnotationReplicateKeysKey] = "ca*"
 
 		client := fake.NewClientBuilder().
-			WithObjects(secretWithKeys, anotherNamespace).
+			WithObjects(configMapWithKeys, anotherNamespace).
 			Build()
 
-		r := &controller.SecretReconciler{
+		r := &controller.ConfigMapReconciler{
 			Client: client,
 			Scheme: scheme.Scheme,
 		}
 
 		resp, err := r.Reconcile(ctx, reconcile.Request{
 			NamespacedName: types.NamespacedName{
-				Name:      secret.Name,
-				Namespace: secret.Namespace,
+				Name:      cm.Name,
+				Namespace: cm.Namespace,
 			},
 		})
 		require.NoError(t, err)
 		assert.Zero(t, resp)
 
-		var replicatedSecret corev1.Secret
+		var replicatedConfigMap corev1.ConfigMap
 		err = client.Get(ctx, types.NamespacedName{
-			Name:      secret.Name,
+			Name:      cm.Name,
 			Namespace: anotherNamespace.Name,
-		}, &replicatedSecret)
+		}, &replicatedConfigMap)
 		require.NoError(t, err)
 
-		assert.Empty(t, replicatedSecret.Data[corev1.TLSCertKey])
-		assert.Empty(t, replicatedSecret.Data[corev1.TLSPrivateKeyKey])
-		assert.Equal(t, secret.Data["ca.crt"], replicatedSecret.Data["ca.crt"])
+		assert.Empty(t, replicatedConfigMap.Data[corev1.TLSCertKey])
+		assert.Empty(t, replicatedConfigMap.Data[corev1.TLSPrivateKeyKey])
+		assert.Equal(t, cm.Data["ca.crt"], replicatedConfigMap.Data["ca.crt"])
 	})
 
 	t.Run("Should Only Replicate To Specified Namespaces", func(t *testing.T) {
@@ -164,39 +162,39 @@ func TestSecretReconciler(t *testing.T) {
 			},
 		}
 
-		secretWithNamespaces := secret.DeepCopy()
-		secretWithNamespaces.Annotations[controller.AnnotationReplicateToKey] = "third-*"
+		configMapWithNamespaces := cm.DeepCopy()
+		configMapWithNamespaces.Annotations[controller.AnnotationReplicateToKey] = "third-*"
 
 		client := fake.NewClientBuilder().
-			WithObjects(secretWithNamespaces, anotherNamespace, thirdNamespace).
+			WithObjects(configMapWithNamespaces, anotherNamespace, thirdNamespace).
 			Build()
 
-		r := &controller.SecretReconciler{
+		r := &controller.ConfigMapReconciler{
 			Client: client,
 			Scheme: scheme.Scheme,
 		}
 
 		resp, err := r.Reconcile(ctx, reconcile.Request{
 			NamespacedName: types.NamespacedName{
-				Name:      secret.Name,
-				Namespace: secret.Namespace,
+				Name:      cm.Name,
+				Namespace: cm.Namespace,
 			},
 		})
 		require.NoError(t, err)
 		assert.Zero(t, resp)
 
-		var replicatedSecret corev1.Secret
+		var replicatedConfigMap corev1.ConfigMap
 		err = client.Get(ctx, types.NamespacedName{
-			Name:      secret.Name,
+			Name:      cm.Name,
 			Namespace: thirdNamespace.Name,
-		}, &replicatedSecret)
+		}, &replicatedConfigMap)
 		require.NoError(t, err)
 
 		// Should not be replicated to anotherNamespace
 		err = client.Get(ctx, types.NamespacedName{
-			Name:      secret.Name,
+			Name:      cm.Name,
 			Namespace: anotherNamespace.Name,
-		}, &replicatedSecret)
+		}, &replicatedConfigMap)
 		require.Error(t, err)
 	})
 }
